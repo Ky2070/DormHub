@@ -9,7 +9,7 @@ class User(AbstractUser):
         ('admin', 'Quản trị viên'),
     )
     phone = models.CharField(max_length=255)
-    student_code = models.CharField(max_length=100, blank=True, null=True)
+    student_code = models.CharField(max_length=100, blank=True, null=True, unique=True)
     avatar = models.ImageField(upload_to='avatars/', null=True, blank=True)
     updated_profile = models.BooleanField(default=False)
     role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='student')
@@ -88,6 +88,23 @@ class RoomRegistration(models.Model):
         if self.room.is_full:
             raise ValueError(f"Phòng {self.room.name} đã đầy, không thể đăng ký thêm")
         super(RoomRegistration, self).save(*args, **kwargs)
+
+
+class RoomSwap(models.Model):
+    student = models.ForeignKey(User, on_delete=models.CASCADE, related_name='requested_swaps', limit_choices_to={'role': 'student'})
+    current_room = models.ForeignKey(Room, on_delete=models.SET_NULL, null=True, blank=True,
+                                     related_name='current_room')
+    desired_room = models.ForeignKey(Room, on_delete=models.SET_NULL, null=True, blank=True,
+                                     related_name='desired_room')
+    reason = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    is_approved = models.BooleanField(default=False)
+    processed_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='processed_swaps',
+                                     limit_choices_to={'role__in': ['admin', 'manager']})
+    processed_at = models.DateTimeField(null=True, blank=True)
+
+    def __str__(self):
+        return f"Yêu cầu đổi phòng của {self.student.username} - {self.created_at.strftime('%d/%m/%Y')}"
 
 
 class FeeType(models.Model):
@@ -173,3 +190,77 @@ class InvoiceDetail(models.Model):
 
     class Meta:
         unique_together = ('invoice', 'fee_type')
+
+
+class NotificationType(models.Model):
+    name = models.CharField(max_length=100)
+    description = models.TextField(blank=True, null=True)
+
+    def __str__(self):
+        return self.name
+
+
+class Notification(models.Model):
+    title = models.CharField(max_length=255)
+    content = models.TextField()
+    notification_type = models.ForeignKey(NotificationType, on_delete=models.SET_NULL, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    sent_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='sent_notifications')
+    target_users = models.ManyToManyField(User, related_name='notifications')
+    is_urgent = models.BooleanField(default=False)
+
+    def __str__(self):
+        return f"[{self.notification_type}] {self.title}"
+
+
+class SupportRequest(models.Model):
+    student = models.ForeignKey(User, on_delete=models.CASCADE, limit_choices_to={'role': 'student'})
+    room = models.ForeignKey(Room, on_delete=models.SET_NULL, null=True, blank=True)
+    title = models.CharField(max_length=255)
+    description = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    is_resolved = models.BooleanField(default=False)
+
+    def __str__(self):
+        return f"{self.title} - {self.student.username}"
+
+
+class SupportResponse(models.Model):
+    request = models.ForeignKey(SupportRequest, on_delete=models.CASCADE, related_name='responses')
+    responder = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, limit_choices_to={'role': 'admin'})
+    content = models.TextField()
+    responded_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Phản hồi từ {self.responder} - {self.request.title}"
+
+
+class Survey(models.Model):
+    title = models.CharField(max_length=255)
+    description = models.TextField(blank=True)
+    created_by = models.ForeignKey(User, on_delete=models.CASCADE, limit_choices_to={'role': 'admin'})
+    start_date = models.DateTimeField()
+    end_date = models.DateTimeField()
+
+    def __str__(self):
+        return self.title
+
+
+class SurveyQuestion(models.Model):
+    survey = models.ForeignKey(Survey, on_delete=models.CASCADE, related_name='questions')
+    question_text = models.TextField()
+
+    def __str__(self):
+        return self.question_text
+
+
+class SurveyResponse(models.Model):
+    student = models.ForeignKey(User, on_delete=models.CASCADE, limit_choices_to={'role': 'student'})
+    question = models.ForeignKey(SurveyQuestion, on_delete=models.CASCADE)
+    answer = models.TextField()
+
+    class Meta:
+        unique_together = ('student', 'question')
+
+    def __str__(self):
+        return f"{self.student.username} - {self.question.question_text}"
