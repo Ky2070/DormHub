@@ -88,3 +88,88 @@ class RoomRegistration(models.Model):
         if self.room.is_full:
             raise ValueError(f"Phòng {self.room.name} đã đầy, không thể đăng ký thêm")
         super(RoomRegistration, self).save(*args, **kwargs)
+
+
+class FeeType(models.Model):
+    name = models.CharField(max_length=100)
+    description = models.TextField(blank=True, null=True)
+    is_recurring = models.BooleanField(default=True)
+
+    def __str__(self):
+        return self.name
+
+
+class PaymentMethod(models.Model):
+    name = models.CharField(max_length=50)
+    description = models.TextField(blank=True, null=True)
+    active = models.BooleanField(default=True)
+
+    def __str__(self):
+        return self.name
+
+
+class Invoice(models.Model):
+    room = models.ForeignKey(Room, on_delete=models.CASCADE)
+    billing_period = models.DateField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    is_paid = models.BooleanField(default=False)
+    paid_at = models.DateTimeField(null=True, blank=True)
+    payment_method = models.ForeignKey(
+        PaymentMethod,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True
+    )
+
+    class Meta:
+        unique_together = ('room', 'billing_period')  # Mỗi phòng chỉ có 1 hóa đơn/tháng
+
+    def __str__(self):
+        return f"Hóa đơn phòng {self.room.name} - {self.billing_period.strftime('%m/%Y')}"
+
+
+class InvoiceDetail(models.Model):
+    UNIT_CHOICES = [
+        ('kWh', 'kWh - Điện năng'),
+        ('m³', 'm³ - Nước'),
+        ('người', 'Người'),
+        ('tháng', 'Tháng'),
+    ]
+    invoice = models.ForeignKey(
+        Invoice,
+        on_delete=models.CASCADE,
+        related_name='invoice_details'
+    )
+    fee_type = models.ForeignKey(
+        FeeType,
+        on_delete=models.CASCADE
+    )
+    quantity = models.FloatField(null=True, blank=True)
+    unit = models.CharField(max_length=30,
+                            choices=UNIT_CHOICES,
+                            null=True, blank=True)
+    unit_price = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        null=True, blank=True  # Giá đơn vị tính phí (ví dụ: giá kWh)
+    )
+    amount = models.DecimalField(
+        max_digits=10,
+        decimal_places=2
+    )
+    description = models.TextField(
+        blank=True,
+        null=True
+    )
+
+    def get_total_amount(self):
+        """Tính tổng tiền cho từng loại phí, dựa trên số lượng và đơn giá"""
+        if self.quantity and self.unit_price:
+            return self.quantity * self.unit_price
+        return 0
+
+    def __str__(self):
+        return f"{self.fee_type.name} - {self.amount}đ"
+
+    class Meta:
+        unique_together = ('invoice', 'fee_type')
