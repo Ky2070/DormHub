@@ -11,7 +11,7 @@ class User(AbstractUser):
     phone = models.CharField(max_length=255)
     student_code = models.CharField(max_length=100, blank=True, null=True, unique=True)
     avatar = models.ImageField(upload_to='avatars/', null=True, blank=True)
-    updated_profile = models.BooleanField(default=False)
+    updated_profile = models.DateTimeField(null=True, blank=True)
     role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='student')
     gender = models.CharField(max_length=20,
                               choices=[
