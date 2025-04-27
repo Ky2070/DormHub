@@ -38,6 +38,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'dorms.apps.DormsConfig',
     'rest_framework',
+    'drf_yasg'
 ]
 
 MIDDLEWARE = [
