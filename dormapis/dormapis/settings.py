@@ -13,6 +13,8 @@ import os
 from pathlib import Path
 from django.conf.global_settings import AUTH_USER_MODEL
 
+from decouple import config
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -38,7 +40,8 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'dorms.apps.DormsConfig',
     'rest_framework',
-    'drf_yasg'
+    'drf_yasg',
+    'oauth2_provider',
 ]
 
 MIDDLEWARE = [
@@ -50,6 +53,12 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
+
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'oauth2_provider.contrib.rest_framework.OAuth2Authentication',
+    )
+}
 
 ROOT_URLCONF = 'dormapis.urls'
 
@@ -82,6 +91,7 @@ DATABASES = {
         'HOST': 'localhost',
     }
 }
+
 AUTH_USER_MODEL = 'dorms.User'
 
 import pymysql
@@ -125,3 +135,6 @@ STATIC_URL = 'static/'
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+CLIENT_ID = config('OAUTH_CLIENT_ID')
+CLIENT_SECRET = config('OAUTH_CLIENT_SECRET')

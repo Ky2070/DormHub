@@ -22,7 +22,7 @@ class UserViewSet(viewsets.ViewSet, generics.CreateAPIView):
     def get_current_user(self, request):
         return Response(serializers.UserSerializer(request.user).data)
 
-    @action(methods=['put'], detail=True, url_path='update-profile', permission_classes=[IsAuthenticated])
+    @action(methods=['put'], detail=False, url_path='update-profile', permission_classes=[IsAuthenticated])
     def update_profile(self, request):
         user = request.user
         serializer = UpdateProfileSerializer(user, data=request.data,

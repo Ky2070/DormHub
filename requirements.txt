@@ -16,6 +16,7 @@ packaging==25.0
 pillow==11.2.1
 pycparser==2.22
 PyMySQL==1.1.1
+python-decouple==3.8
 pytz==2025.2
 PyYAML==6.0.2
 requests==2.32.3
