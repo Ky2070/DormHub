@@ -4,7 +4,7 @@ from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework import viewsets, generics, status, parsers
 from .models import User
 from . import serializers
-from .perms import IsAdmin
+from .perms import IsAdmin, OwnerPerms
 
 from .serializers import UpdateProfileSerializer
 
@@ -22,7 +22,7 @@ class UserViewSet(viewsets.ViewSet, generics.CreateAPIView):
     def get_current_user(self, request):
         return Response(serializers.UserSerializer(request.user).data)
 
-    @action(methods=['put'], detail=False, url_path='update-profile', permission_classes=[IsAuthenticated])
+    @action(methods=['put'], detail=False, url_path='update-profile', permission_classes=[OwnerPerms])
     def update_profile(self, request):
         user = request.user
         serializer = UpdateProfileSerializer(user, data=request.data,

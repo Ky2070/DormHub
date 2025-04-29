@@ -15,13 +15,13 @@ class UserSerializer(serializers.ModelSerializer):
             }
         }
 
-        def create(self, validated_data):
-            data = validated_data.copy()
-            u = User(**data)
-            u.set_password(u.password)
-            u.save()
+    def create(self, validated_data):
+        data = validated_data.copy()
+        u = User(**data)
+        u.set_password(u.password)
+        u.save()
 
-            return u
+        return u
 
 
 class UpdateProfileSerializer(serializers.ModelSerializer):

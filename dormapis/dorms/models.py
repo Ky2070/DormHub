@@ -8,7 +8,7 @@ class User(AbstractUser):
         ('student', 'Sinh viên'),
         ('admin', 'Quản trị viên'),
     )
-    phone = models.CharField(max_length=255)
+    phone = models.CharField(max_length=100, null=True, blank=True)
     student_code = models.CharField(max_length=100, blank=True, null=True, unique=True)
     avatar = models.ImageField(upload_to='avatars/', null=True, blank=True)
     updated_profile = models.DateTimeField(null=True, blank=True)
