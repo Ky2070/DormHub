@@ -22,12 +22,17 @@ class UserViewSet(viewsets.ViewSet, generics.CreateAPIView):
     def get_current_user(self, request):
         return Response(serializers.UserSerializer(request.user).data)
 
-    @action(methods=['put'], detail=False, url_path='update-profile', permission_classes=[OwnerPerms])
-    def update_profile(self, request):
-        user = request.user
+    @action(methods=['put'], detail=True, url_path='update-profile', permission_classes=[OwnerPerms])
+    def update_profile(self, request, pk=None):
+        try:
+            user = User.objects.get(pk=pk)
+        except User.DoesNotExist:
+            return Response({'detail': 'Không tìm thấy người dùng.'}, status=status.HTTP_404_NOT_FOUND)
+
+        self.check_object_permissions(request, user)
+
         serializer = UpdateProfileSerializer(user, data=request.data,
                                              partial=True)
-
         if serializer.is_valid():
             serializer.save()
             return Response({"detail": "Hồ sơ đã được cập nhật thành công."}, status=status.HTTP_200_OK)

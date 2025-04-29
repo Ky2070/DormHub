@@ -8,7 +8,7 @@ from datetime import date
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ['id', 'username', 'email', 'phone', 'student_code', 'avatar', 'role', 'gender', 'date_of_birth', 'address', 'national_code']
+        fields = ['first_name', 'last_name', 'username', 'password', 'avatar']
         extra_kwargs = {
             'password': {
                 'write_only': True
@@ -18,6 +18,7 @@ class UserSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         data = validated_data.copy()
         u = User(**data)
+        print(u.password)
         u.set_password(u.password)
         u.save()
 
@@ -29,7 +30,7 @@ class UpdateProfileSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ['phone', 'avatar', 'gender', 'date_of_birth', 'address', 'national_code', 'password']
+        fields = ['username', 'email', 'phone', 'avatar', 'gender', 'date_of_birth', 'address', 'national_code', 'student_code', 'password']
 
     def validate_phone(self, value):
         # Ví dụ: Validate số điện thoại chỉ chứa số và 10-11 ký tự
