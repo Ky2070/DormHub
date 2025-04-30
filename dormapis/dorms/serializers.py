@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import User
+from .models import User, Room, RoomRegistration, RoomSwap, Building
 import re
 from django.utils import timezone
 from datetime import date
@@ -30,7 +30,8 @@ class UpdateProfileSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ['username', 'email', 'phone', 'avatar', 'gender', 'date_of_birth', 'address', 'national_code', 'student_code', 'password']
+        fields = ['username', 'email', 'phone', 'avatar', 'gender', 'date_of_birth', 'address', 'national_code',
+                  'student_code', 'password']
 
     def validate_phone(self, value):
         # Ví dụ: Validate số điện thoại chỉ chứa số và 10-11 ký tự
@@ -69,3 +70,46 @@ class UpdateProfileSerializer(serializers.ModelSerializer):
         instance.profile_updated_at = timezone.now()
         instance.save()
         return instance
+
+
+class RoomSerializer(serializers.ModelSerializer):
+    current_students = serializers.IntegerField(read_only=True)
+    is_full = serializers.BooleanField(read_only=True)
+    available_capacity = serializers.IntegerField(read_only=True)
+
+    class Meta:
+        model = Room
+        fields = ['id', 'name', 'building', 'capacity', 'gender_restriction',
+                  'current_students', 'is_full', 'available_capacity']
+
+
+class RegisterRoomSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = RoomRegistration
+        fields = ['id', 'room', 'start_date']
+
+    def validate(self, data):
+        room = data['room']
+        if room.is_full:
+            raise serializers.ValidationError("Phòng {room.name} đã đầy")
+        return data
+
+
+class RoomSwapSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = RoomSwap
+        fields = ['id', 'current_room', 'desired_room', 'reason']
+
+
+class BuildingSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Building
+        fields = ['id', 'name', 'address']
+
+
+class BuildingDetailSerializer(serializers.ModelSerializer):
+    rooms = RoomSerializer(source='room_set', many=True, read_only=True)
+
+    class Meta:
+        model = Building
+        fields = ['id', 'name', 'address', 'rooms']
