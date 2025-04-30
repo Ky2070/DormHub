@@ -2,11 +2,9 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework import viewsets, generics, status, parsers
-from .models import User
+from .models import User, Building, Room, RoomRegistration, RoomSwap
 from . import serializers
 from .perms import IsAdmin, OwnerPerms
-
-from .serializers import UpdateProfileSerializer
 
 
 # Create your views here.
@@ -31,10 +29,46 @@ class UserViewSet(viewsets.ViewSet, generics.CreateAPIView):
 
         self.check_object_permissions(request, user)
 
-        serializer = UpdateProfileSerializer(user, data=request.data,
-                                             partial=True)
+        serializer = serializers.UpdateProfileSerializer(user, data=request.data,
+                                                         partial=True)
         if serializer.is_valid():
             serializer.save()
             return Response({"detail": "Hồ sơ đã được cập nhật thành công."}, status=status.HTTP_200_OK)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class BuildingViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = Building.objects.all()
+    permission_classes = [IsAuthenticated]
+
+    def get_serializer_class(self):
+        if self.action == 'retrieve':
+            return serializers.BuildingDetailSerializer
+        return serializers.BuildingSerializer
+
+
+class RoomViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = Room.objects.select_related('building').all()
+    serializer_class = serializers.RoomSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        queryset = self.queryset
+        is_full = self.request.query_params.get('is_full')
+        gender = self.request.query_params.get('gender_restriction')
+        building_id = self.request.query_params.get('building_id')
+
+        if is_full is not None:
+            if is_full.lower() == 'false':
+                queryset = [room for room in queryset if not room.is_full]
+            elif is_full.lower() == 'true':
+                queryset = [room for room in queryset if room.is_full]
+
+        if gender:
+            queryset = [room for room in queryset if room.gender_restriction == gender]
+
+        if building_id:
+            queryset = [room for room in queryset if str(room.building.id) == building_id]
+
+        return queryset
