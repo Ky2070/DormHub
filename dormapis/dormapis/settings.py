@@ -18,6 +18,8 @@ from decouple import config
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+MEDIA_ROOT = '%s/dorms/static/' % BASE_DIR
+
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
@@ -40,8 +42,11 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'dorms.apps.DormsConfig',
     'rest_framework',
+    'ckeditor',
+    'ckeditor_uploader',
     'drf_yasg',
     'oauth2_provider',
+    'corsheaders',
 ]
 
 MIDDLEWARE = [
@@ -52,6 +57,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
 ]
 
 REST_FRAMEWORK = {
@@ -60,7 +66,13 @@ REST_FRAMEWORK = {
     )
 }
 
+OAUTH2_PROVIDER = {'OAUTH2_BACKEND_CLASS': 'oauth2_provider.oauth2_backends.JSONOAuthLibCore'}
+
 ROOT_URLCONF = 'dormapis.urls'
+
+CKEDITOR_UPLOAD_PATH = "ckeditors/dorms/"
+
+CORS_ALLOW_ALL_ORIGINS = True
 
 TEMPLATES = [
     {
@@ -92,11 +104,12 @@ DATABASES = {
     }
 }
 
-AUTH_USER_MODEL = 'dorms.User'
-
 import pymysql
 
 pymysql.install_as_MySQLdb()
+
+AUTH_USER_MODEL = 'dorms.User'
+
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
 
@@ -138,3 +151,16 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 CLIENT_ID = config('OAUTH_CLIENT_ID')
 CLIENT_SECRET = config('OAUTH_CLIENT_SECRET')
+import cloudinary
+import cloudinary.uploader
+from cloudinary.utils import cloudinary_url
+
+# Configuration
+cloudinary.config(
+    cloud_name=config('CLOUD_NAME'),
+    api_key=config('API_KEY'),
+    api_secret=config('API_SECRET'),  # Click 'View API Keys' above to copy your API secret
+    secure=True
+)
+
+
