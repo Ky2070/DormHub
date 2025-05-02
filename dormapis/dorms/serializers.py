@@ -89,9 +89,22 @@ class RegisterRoomSerializer(serializers.ModelSerializer):
         fields = ['id', 'room', 'start_date']
 
     def validate(self, data):
+        user = self.context['request'].user
         room = data['room']
+
         if room.is_full:
             raise serializers.ValidationError("Phòng {room.name} đã đầy")
+
+        already_registered = RoomRegistration.objects.filter(
+            student=user,
+            is_active=True
+        ).exists()
+
+        if already_registered:
+            raise serializers.ValidationError(
+                "Bạn đã đăng ký phòng rồi. Nếu muốn chuyển phòng, hãy gửi yêu cầu chuyển phòng để được duyệt."
+            )
+
         return data
 
 
@@ -99,6 +112,25 @@ class RoomSwapSerializer(serializers.ModelSerializer):
     class Meta:
         model = RoomSwap
         fields = ['id', 'current_room', 'desired_room', 'reason']
+
+    def validate_desired_room(self, desired_room):
+        request = self.context.get('request')
+        student = request.user if request else None
+
+        if not student:
+            raise serializers.ValidationError("Không xác định được sinh viên.")
+
+        if desired_room.is_full:
+            raise serializers.ValidationError(f"Phòng {desired_room.name} đã đầy, vui lòng chọn phòng khác.")
+
+        current_registration = RoomRegistration.objects.filter(
+            student=student, is_active=True
+        ).first()
+
+        if current_registration and current_registration.room == desired_room:
+            raise serializers.ValidationError("Bạn đang ở phòng này rồi.")
+
+        return desired_room
 
 
 class BuildingSerializer(serializers.ModelSerializer):

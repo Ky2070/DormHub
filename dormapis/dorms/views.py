@@ -1,5 +1,6 @@
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework import viewsets, generics, status, parsers
 from .models import User, Building, Room, RoomRegistration, RoomSwap
@@ -72,3 +73,43 @@ class RoomViewSet(viewsets.ReadOnlyModelViewSet):
             queryset = [room for room in queryset if str(room.building.id) == building_id]
 
         return queryset
+
+
+class RoomRegisterViewSet(viewsets.ViewSet, generics.CreateAPIView):
+    serializer_class = serializers.RegisterRoomSerializer
+    permission_classes = [IsAuthenticated]
+
+    def perform_create(self, serializer):
+        serializer.save(student=self.request.user)
+
+
+class RoomSwapViewSet(viewsets.ViewSet, generics.CreateAPIView):
+    serializer_class = serializers.RoomSwapSerializer
+    permission_classes = [IsAuthenticated]
+
+    def perform_create(self, serializer):
+        student = self.request.user
+
+        # Kiểm tra sinh viên đã có yêu cầu chuyển phòng chưa được duyệt chưa
+        pending_swap = RoomSwap.objects.filter(student=student, is_approved=False).exists()
+        if pending_swap:
+            raise ValidationError("Bạn đã có yêu cầu chuyển phòng đang chờ xử lý.")
+
+        # Kiểm tra sinh viên hiện có phòng không
+        current_registration = student.roomregistration_set.filter(is_active=True).first()
+        if not current_registration:
+            raise ValidationError("Bạn chưa có phòng hiện tại để chuyển.")
+
+        serializer.save(student=student, current_room=current_registration.room)
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+        return Response(
+            {
+                "message": "Gửi yêu cầu chuyển phòng thành công",
+                "data": serializer.data
+            },
+            status=status.HTTP_201_CREATED
+        )
