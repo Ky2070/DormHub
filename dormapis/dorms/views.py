@@ -1,3 +1,5 @@
+from django.utils import timezone
+
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.exceptions import ValidationError
@@ -83,7 +85,8 @@ class RoomRegisterViewSet(viewsets.ViewSet, generics.CreateAPIView):
         serializer.save(student=self.request.user)
 
 
-class RoomSwapViewSet(viewsets.ViewSet, generics.CreateAPIView):
+class RoomSwapViewSet(viewsets.ViewSet, generics.ListAPIView, generics.CreateAPIView):
+    queryset = RoomSwap.objects.all()
     serializer_class = serializers.RoomSwapSerializer
     permission_classes = [IsAuthenticated]
 
@@ -113,3 +116,44 @@ class RoomSwapViewSet(viewsets.ViewSet, generics.CreateAPIView):
             },
             status=status.HTTP_201_CREATED
         )
+
+    @action(detail=True, methods=['put', 'patch'], url_path='approve', permission_classes=[IsAdmin])
+    def approve(self, request, pk=None):
+        """
+        Admin PUT /room-swap/{id}/approve/ để duyệt yêu cầu chuyển phòng.
+        """
+        try:
+            swap = self.get_object()
+        except RoomSwap.DoesNotExist:
+            return Response({"detail": "Yêu cầu không tồn tại."}, status=404)
+
+        if swap.is_approved:
+            return Response({"detail": "Yêu cầu này đã được duyệt."}, status=400)
+
+        if swap.desired_room.is_full:
+            return Response({"detail": f"Phòng {swap.desired_room.name} đã đầy."}, status=400)
+
+        student = swap.student
+
+        current_reg = RoomRegistration.objects.filter(student=student, is_active=True).first()
+        if current_reg:
+            current_reg.is_active = False
+            current_reg.end_date = timezone.now().date()
+            current_reg.save()
+
+        RoomRegistration.objects.create(
+            student=student,
+            room=swap.desired_room,
+            start_date=timezone.now().date()
+        )
+
+        swap.is_approved = True
+        swap.processed_by = request.user
+        swap.processed_at = timezone.now()
+        swap.save()
+
+        serializer = self.get_serializer(swap)
+        return Response({
+            "message": "Phê duyệt thành công",
+            "data": serializer.data
+        })

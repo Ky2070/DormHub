@@ -93,7 +93,7 @@ class RegisterRoomSerializer(serializers.ModelSerializer):
         room = data['room']
 
         if room.is_full:
-            raise serializers.ValidationError("Phòng {room.name} đã đầy")
+            raise serializers.ValidationError("{room.name} đã đầy")
 
         already_registered = RoomRegistration.objects.filter(
             student=user,
@@ -105,13 +105,19 @@ class RegisterRoomSerializer(serializers.ModelSerializer):
                 "Bạn đã đăng ký phòng rồi. Nếu muốn chuyển phòng, hãy gửi yêu cầu chuyển phòng để được duyệt."
             )
 
+        if hasattr(user, 'gender') and hasattr(room, 'gender_restriction'):
+            if user.gender != room.gender_restriction:
+                raise serializers.ValidationError(
+                    f"{room.name} chỉ dành cho {room.gender_restriction}, bạn không đủ điều kiện."
+                )
+
         return data
 
 
 class RoomSwapSerializer(serializers.ModelSerializer):
     class Meta:
         model = RoomSwap
-        fields = ['id', 'current_room', 'desired_room', 'reason']
+        fields = ['id', 'current_room', 'desired_room', 'reason', 'is_approved', 'processed_by', 'processed_at']
 
     def validate_desired_room(self, desired_room):
         request = self.context.get('request')
@@ -129,6 +135,13 @@ class RoomSwapSerializer(serializers.ModelSerializer):
 
         if current_registration and current_registration.room == desired_room:
             raise serializers.ValidationError("Bạn đang ở phòng này rồi.")
+
+        # ✅ Kiểm tra giới tính phòng và sinh viên
+        if hasattr(student, 'gender') and hasattr(desired_room, 'gender_restriction'):
+            if student.gender != desired_room.gender_restriction:
+                raise serializers.ValidationError(
+                    f"Phòng {desired_room.name} dành cho {desired_room.gender_restriction}, bạn không được phép chuyển tới."
+                )
 
         return desired_room
 
