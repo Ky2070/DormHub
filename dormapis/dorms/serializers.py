@@ -117,7 +117,7 @@ class RegisterRoomSerializer(serializers.ModelSerializer):
 class RoomSwapSerializer(serializers.ModelSerializer):
     class Meta:
         model = RoomSwap
-        fields = ['id', 'current_room', 'desired_room', 'reason', 'is_approved', 'processed_by', 'processed_at']
+        fields = ['id', 'student', 'current_room', 'desired_room', 'reason', 'is_approved', 'processed_by', 'processed_at']
 
     def validate_desired_room(self, desired_room):
         request = self.context.get('request')

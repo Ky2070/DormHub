@@ -7,7 +7,7 @@ from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework import viewsets, generics, status, parsers
 from .models import User, Building, Room, RoomRegistration, RoomSwap
 from . import serializers
-from .perms import IsAdmin, OwnerPerms
+from .perms import IsAdmin, OwnerPerms, RoomSwapOwner, IsStudent
 
 
 # Create your views here.
@@ -90,6 +90,17 @@ class RoomSwapViewSet(viewsets.ViewSet, generics.ListAPIView, generics.CreateAPI
     serializer_class = serializers.RoomSwapSerializer
     permission_classes = [IsAuthenticated]
 
+    def get_permissions(self):
+        if self.request.method == 'POST':
+            return [IsStudent()]
+        elif self.request.method == 'GET':
+            return [RoomSwapOwner()]
+        return super().get_permissions()
+
+    def get_queryset(self):
+        # Trả về danh sách RoomSwap của student hiện tại, sắp xếp theo thời gian giảm dần
+        return RoomSwap.objects.filter(student=self.request.user).order_by('-created_at')
+
     def perform_create(self, serializer):
         student = self.request.user
 
@@ -157,3 +168,4 @@ class RoomSwapViewSet(viewsets.ViewSet, generics.ListAPIView, generics.CreateAPI
             "message": "Phê duyệt thành công",
             "data": serializer.data
         })
+
