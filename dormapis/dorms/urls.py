@@ -8,6 +8,7 @@ router.register('building', views.BuildingViewSet, basename='building')
 router.register('room', views.RoomViewSet, basename='room')
 router.register('register-room', views.RoomRegisterViewSet, basename='register-room')
 router.register('room-swap', views.RoomSwapViewSet, basename='swap-room')
+router.register('invoice', views.InvoiceViewSet, basename='invoice')
 urlpatterns = [
     path('', include(router.urls)),
 ]

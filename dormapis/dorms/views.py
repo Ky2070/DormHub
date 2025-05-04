@@ -5,7 +5,7 @@ from rest_framework.response import Response
 from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework import viewsets, generics, status, parsers
-from .models import User, Building, Room, RoomRegistration, RoomSwap
+from .models import User, Building, Room, RoomRegistration, RoomSwap, Invoice
 from . import serializers
 from .perms import IsAdmin, OwnerPerms, RoomSwapOwner, IsStudent
 
@@ -142,7 +142,7 @@ class RoomSwapViewSet(viewsets.ViewSet, generics.ListAPIView, generics.CreateAPI
             return Response({"detail": "Yêu cầu này đã được duyệt."}, status=400)
 
         if swap.desired_room.is_full:
-            return Response({"detail": f"Phòng {swap.desired_room.name} đã đầy."}, status=400)
+            return Response({"detail": f"{swap.desired_room.name} đã đầy."}, status=400)
 
         student = swap.student
 
@@ -168,4 +168,58 @@ class RoomSwapViewSet(viewsets.ViewSet, generics.ListAPIView, generics.CreateAPI
             "message": "Phê duyệt thành công",
             "data": serializer.data
         })
+
+
+class InvoiceViewSet(viewsets.ViewSet, generics.ListAPIView, generics.RetrieveAPIView):
+    serializer_class = serializers.InvoiceSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_permissions(self):
+        if self.action.__eq__('pay'):
+            return [IsAuthenticated(), IsStudent()]
+        elif self.request.method.__eq__('POST'):
+            return [IsAuthenticated(), IsAdmin()]
+        return super().get_permissions()
+
+    def get_queryset(self):
+        user = self.request.user
+        if IsAdmin().has_permission(self.request, self):
+            return Invoice.objects.all()
+        elif IsStudent().has_permission(self.request, self):
+            reg = RoomRegistration.objects.filter(student=user, is_active=True).first()
+            if reg:
+                return Invoice.objects.filter(room=reg.room)
+        return Invoice.objects.none()
+
+    def get_serializer_class(self):
+        if self.action == 'pay':
+            return serializers.InvoicePaySerializer
+        return serializers.InvoiceSerializer
+
+    @action(detail=True, methods=['patch'])
+    def pay(self, request, pk=None):
+        invoice = self.get_queryset().filter(pk=pk).first()
+        if not invoice:
+            return Response({"detail": "Không tìm thấy hóa đơn."}, status=404)
+
+        if invoice.is_paid:
+            return Response({"detail": "Hóa đơn đã thanh toán."}, status=400)
+
+        # Check xem sinh viên có phải chủ phòng đang thuê không
+        reg = RoomRegistration.objects.filter(student=request.user, is_active=True).first()
+        if not reg or reg.room != invoice.room:
+            return Response({"detail": "Bạn không có quyền thanh toán hóa đơn này."}, status=403)
+
+        serializer = serializers.InvoiceSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        invoice.is_paid = True
+        invoice.paid_at = timezone.now()
+        invoice.payment_method = serializer.validated_data['payment_method']
+        invoice.save()
+
+        return Response({
+            "message": "Thanh toán thành công.",
+            "data": serializers.InvoiceSerializer(invoice).data
+        }, status=200)
 

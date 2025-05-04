@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import User, Room, RoomRegistration, RoomSwap, Building
+from .models import User, Room, RoomRegistration, RoomSwap, Building, Invoice, InvoiceDetail, PaymentMethod
 import re
 from django.utils import timezone
 from datetime import date
@@ -117,7 +117,8 @@ class RegisterRoomSerializer(serializers.ModelSerializer):
 class RoomSwapSerializer(serializers.ModelSerializer):
     class Meta:
         model = RoomSwap
-        fields = ['id', 'student', 'current_room', 'desired_room', 'reason', 'is_approved', 'processed_by', 'processed_at']
+        fields = ['id', 'student', 'current_room', 'desired_room', 'reason', 'is_approved', 'processed_by',
+                  'processed_at']
 
     def validate_desired_room(self, desired_room):
         request = self.context.get('request')
@@ -158,3 +159,27 @@ class BuildingDetailSerializer(serializers.ModelSerializer):
     class Meta:
         model = Building
         fields = ['id', 'name', 'address', 'rooms']
+
+
+class InvoiceDetailSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = InvoiceDetail
+        fields = '__all__'
+
+    def validate(self, attrs):
+        quanity = attrs.get('quantity', 0) or 0
+        unit_price = attrs.get('unit_price', 0) or 0
+        attrs['amount'] = quanity * unit_price
+        return attrs
+
+
+class InvoiceSerializer(serializers.ModelSerializer):
+    invoice_details = InvoiceDetailSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = Invoice
+        fields = '__all__'
+
+
+class InvoicePaySerializer(serializers.Serializer):
+    payment_method = serializers.PrimaryKeyRelatedField(queryset=PaymentMethod.objects.filter(active=True))
