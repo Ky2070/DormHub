@@ -2,10 +2,10 @@ from django.utils import timezone
 
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from rest_framework.exceptions import ValidationError
+from rest_framework.exceptions import ValidationError, PermissionDenied
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework import viewsets, generics, status, parsers
-from .models import User, Building, Room, RoomRegistration, RoomSwap, Invoice
+from .models import User, Building, Room, RoomRegistration, RoomSwap, Invoice, InvoiceDetail
 from . import serializers
 from .perms import IsAdmin, OwnerPerms, RoomSwapOwner, IsStudent
 
@@ -170,7 +170,7 @@ class RoomSwapViewSet(viewsets.ViewSet, generics.ListAPIView, generics.CreateAPI
         })
 
 
-class InvoiceViewSet(viewsets.ViewSet, generics.ListAPIView, generics.RetrieveAPIView):
+class InvoiceViewSet(viewsets.ViewSet, generics.ListAPIView, generics.RetrieveAPIView, generics.CreateAPIView):
     serializer_class = serializers.InvoiceSerializer
     permission_classes = [IsAuthenticated]
 
@@ -191,6 +191,15 @@ class InvoiceViewSet(viewsets.ViewSet, generics.ListAPIView, generics.RetrieveAP
                 return Invoice.objects.filter(room=reg.room)
         return Invoice.objects.none()
 
+    def get_object(self):
+        obj = super().get_object()
+        user = self.request.user
+        if IsStudent().has_permission(self.request, self):
+            reg = RoomRegistration.objects.filter(student=user, is_active=True).first()
+            if not reg or reg.room != obj.room:
+                raise PermissionDenied("Bạn không có quyền xem phòng này.")
+        return obj
+
     def get_serializer_class(self):
         if self.action == 'pay':
             return serializers.InvoicePaySerializer
@@ -210,7 +219,7 @@ class InvoiceViewSet(viewsets.ViewSet, generics.ListAPIView, generics.RetrieveAP
         if not reg or reg.room != invoice.room:
             return Response({"detail": "Bạn không có quyền thanh toán hóa đơn này."}, status=403)
 
-        serializer = serializers.InvoiceSerializer(data=request.data)
+        serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
         invoice.is_paid = True
@@ -223,3 +232,11 @@ class InvoiceViewSet(viewsets.ViewSet, generics.ListAPIView, generics.RetrieveAP
             "data": serializers.InvoiceSerializer(invoice).data
         }, status=200)
 
+
+class InvoiceDetailViewSet(viewsets.GenericViewSet,
+                           generics.ListAPIView,
+                           generics.RetrieveAPIView,
+                           generics.CreateAPIView):
+    queryset = InvoiceDetail.objects.all()
+    serializer_class = serializers.InvoiceDetailSerializer
+    permission_classes = [IsAuthenticated, IsAdmin]

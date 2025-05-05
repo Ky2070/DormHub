@@ -3,6 +3,7 @@ from .models import User, Room, RoomRegistration, RoomSwap, Building, Invoice, I
 import re
 from django.utils import timezone
 from datetime import date
+from decimal import Decimal
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -165,12 +166,21 @@ class InvoiceDetailSerializer(serializers.ModelSerializer):
     class Meta:
         model = InvoiceDetail
         fields = '__all__'
+        extra_kwargs = {
+            'amount': {'read_only': True}
+        }
 
     def validate(self, attrs):
-        quanity = attrs.get('quantity', 0) or 0
-        unit_price = attrs.get('unit_price', 0) or 0
-        attrs['amount'] = quanity * unit_price
+        quantity = Decimal(str(attrs.get('quantity', 0) or 0))
+        unit_price = attrs.get('unit_price', Decimal('0.0')) or Decimal('0.0')
+        attrs['amount'] = quantity * unit_price
         return attrs
+
+    def create(self, validated_data):
+        quantity = Decimal(str(validated_data.get('quantity', 0) or 0))
+        unit_price = validated_data.get('unit_price', Decimal('0.0')) or Decimal('0.0')
+        validated_data['amount'] = quantity * unit_price
+        return super().create(validated_data)
 
 
 class InvoiceSerializer(serializers.ModelSerializer):

@@ -9,6 +9,7 @@ router.register('room', views.RoomViewSet, basename='room')
 router.register('register-room', views.RoomRegisterViewSet, basename='register-room')
 router.register('room-swap', views.RoomSwapViewSet, basename='swap-room')
 router.register('invoice', views.InvoiceViewSet, basename='invoice')
+router.register('invoice-detail', views.InvoiceDetailViewSet, basename='invoice-detail')
 urlpatterns = [
     path('', include(router.urls)),
 ]
