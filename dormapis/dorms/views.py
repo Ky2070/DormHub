@@ -192,13 +192,13 @@ class InvoiceViewSet(viewsets.ViewSet, generics.ListAPIView, generics.RetrieveAP
         return Invoice.objects.none()
 
     def get_object(self):
-        obj = super().get_object()
+        invoice = generics.get_object_or_404(Invoice, pk=self.kwargs.get('pk'))
         user = self.request.user
         if IsStudent().has_permission(self.request, self):
             reg = RoomRegistration.objects.filter(student=user, is_active=True).first()
-            if not reg or reg.room != obj.room:
-                raise PermissionDenied("Bạn không có quyền xem phòng này.")
-        return obj
+            if not reg or reg.room != invoice.room:
+                raise PermissionDenied("Hóa đơn không phải của phòng bạn!.")
+        return invoice
 
     def get_serializer_class(self):
         if self.action == 'pay':
