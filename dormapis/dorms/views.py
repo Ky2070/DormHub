@@ -8,8 +8,7 @@ from rest_framework import viewsets, generics, status, parsers
 from .models import User, Building, Room, RoomRegistration, RoomSwap, Invoice, InvoiceDetail
 from . import serializers
 from .perms import IsAdmin, OwnerPerms, RoomSwapOwner, IsStudent
-
-
+from .utils.email import send_invoice_email
 # Create your views here.
 
 
@@ -204,6 +203,13 @@ class InvoiceViewSet(viewsets.ViewSet, generics.ListAPIView, generics.RetrieveAP
         if self.action == 'pay':
             return serializers.InvoicePaySerializer
         return serializers.InvoiceSerializer
+
+    def perform_create(self, serializer):
+        invoice = serializer.save()
+        registrations = RoomRegistration.objects.filter(room=invoice.room, is_active=True)
+
+        for reg in registrations:
+            send_invoice_email(reg.student, invoice)
 
     @action(detail=True, methods=['patch'])
     def pay(self, request, pk=None):

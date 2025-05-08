@@ -1,0 +1,22 @@
+from django.core.mail import send_mail
+from django.conf import settings
+from datetime import timedelta
+
+
+def send_invoice_email(user, invoice):
+    due_date = invoice.billing_period + timedelta(days=7)
+    formatted_due_date = due_date.strftime('%d/%m/%Y')
+    subject = f"Hóa đơn tiền phòng {invoice.billing_period.strftime('%d/%m/%Y')} từ ký túc xá"
+    message = f"""
+        Xin chào {user.last_name},
+    Bạn có hóa đơn mới cho {invoice.room.name}.
+        Tiền phòng cần thanh toán: 2.200.000 VND
+        Hạn thanh toán: {formatted_due_date}
+
+        Vui lòng đăng nhập hệ thống để xem chi tiết và thanh toán.
+
+        Trân trọng,
+        Ban quản lý ký túc xá
+        """
+    recipient = [user.email]
+    send_mail(subject, message, settings.DEFAULT_FROM_EMAIL, recipient)
