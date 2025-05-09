@@ -204,13 +204,6 @@ class InvoiceViewSet(viewsets.ViewSet, generics.ListAPIView, generics.RetrieveAP
             return serializers.InvoicePaySerializer
         return serializers.InvoiceSerializer
 
-    def perform_create(self, serializer):
-        invoice = serializer.save()
-        registrations = RoomRegistration.objects.filter(room=invoice.room, is_active=True)
-
-        for reg in registrations:
-            send_invoice_email(reg.student, invoice)
-
     @action(detail=True, methods=['patch'])
     def pay(self, request, pk=None):
         invoice = self.get_queryset().filter(pk=pk).first()
@@ -246,3 +239,17 @@ class InvoiceDetailViewSet(viewsets.GenericViewSet,
     queryset = InvoiceDetail.objects.all()
     serializer_class = serializers.InvoiceDetailSerializer
     permission_classes = [IsAuthenticated, IsAdmin]
+
+    def perform_create(self, serializer):
+        detail = serializer.save()
+        invoice = detail.invoice
+
+        # Danh sách loại phí (có thể tùy chỉnh nếu có thay đổi về gói dịch vụ)
+        required_fee_types = {'Tiền phòng', 'Điện', 'Nước', 'Internet'}
+
+        existing_fee_types = set(invoice.invoice_details.values_list('fee_type__name', flat=True))
+
+        if required_fee_types.issubset(existing_fee_types):
+            registrations = RoomRegistration.objects.filter(room=invoice.room, is_active=True)
+            for reg in registrations:
+                send_invoice_email(reg.student, invoice)
