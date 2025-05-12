@@ -102,6 +102,13 @@ EMAIL_HOST_USER = 's277beautiful@gmail.com'  # Gmail bạn dùng để gửi
 EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD') # App Password, KHÔNG dùng mật khẩu Gmail thường
 
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
+
+# VNPAY-SETTINGS
+VNPAY_TMN_CODE = os.getenv("VNPAY_TMN_CODE")
+VNPAY_HASH_SECRET_KEY = os.getenv("VNPAY_HASH_SECRET_KEY")
+VNPAY_PAYMENT_URL = os.getenv("VNPAY_PAYMENT_URL")
+VNPAY_RETURN_URL = os.getenv("VNPAY_RETURN_URL")
+
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
