@@ -10,6 +10,7 @@ router.register('register-room', views.RoomRegisterViewSet, basename='register-r
 router.register('room-swap', views.RoomSwapViewSet, basename='swap-room')
 router.register('invoice', views.InvoiceViewSet, basename='invoice')
 router.register('invoice-detail', views.InvoiceDetailViewSet, basename='invoice-detail')
+router.register('fcm',views.FCMTokenViewSet, basename='firebase-cloud-message')
 urlpatterns = [
     path('', include(router.urls)),
     path('payment-return/', views.payment_return, name='payment_return'),

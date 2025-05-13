@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import User, Room, RoomRegistration, RoomSwap, Building, Invoice, InvoiceDetail, PaymentMethod
+from .models import User, Room, RoomRegistration, RoomSwap, Building, Invoice, InvoiceDetail, PaymentMethod, FCMDevice
 import re
 from django.utils import timezone
 from datetime import date
@@ -193,3 +193,9 @@ class InvoiceSerializer(serializers.ModelSerializer):
 
 class InvoicePaySerializer(serializers.Serializer):
     payment_method = serializers.PrimaryKeyRelatedField(queryset=PaymentMethod.objects.filter(active=True))
+
+
+class FCMDeviceSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = FCMDevice
+        fields = ['token']

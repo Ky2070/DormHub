@@ -7,9 +7,9 @@ from .utils.vnpay import VNPay
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.exceptions import ValidationError, PermissionDenied
-from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework.permissions import IsAuthenticated
 from rest_framework import viewsets, generics, status, parsers
-from .models import User, Building, Room, RoomRegistration, RoomSwap, Invoice, InvoiceDetail
+from .models import User, Building, Room, RoomRegistration, RoomSwap, Invoice, InvoiceDetail, FCMDevice
 from . import serializers
 from .perms import IsAdmin, OwnerPerms, RoomSwapOwner, IsStudent
 from .services.vnpay_service import VNPayService
@@ -332,3 +332,16 @@ def payment_return(request):
             "status": "Failed"
         }
     }, status=400)
+
+
+class FCMTokenViewSet(viewsets.ViewSet, generics.CreateAPIView):
+    serializer_class = serializers.FCMDeviceSerializer
+    permission_classes = [IsAuthenticated]
+
+    def perform_create(self, serializer):
+        token = serializer.validated_data['token']
+        FCMDevice.objects.update_or_create(
+            user=self.request.user,
+            token=token,
+            defaults={'token': token}
+        )
