@@ -4,7 +4,7 @@ import hmac
 import urllib.parse
 
 
-class vnpay:
+class VNPay:
     def __init__(self):
         self.requestData = {}
         self.responseData = {}
@@ -28,6 +28,6 @@ class vnpay:
         return urllib.parse.urlencode(sorted_data)
 
     def _hmac_sha512(self, key, data):
-        byte_key = bytes(key, 'utf-8')
+        byte_key = bytes(str(key), 'utf-8')
         message = bytes(data, 'utf-8')
         return hmac.new(byte_key, message, hashlib.sha512).hexdigest()

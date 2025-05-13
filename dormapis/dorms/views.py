@@ -1,5 +1,9 @@
-from django.utils import timezone
+from datetime import datetime
 
+from django.utils import timezone
+from django.http import JsonResponse
+from django.conf import settings
+from .utils.vnpay import VNPay
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.exceptions import ValidationError, PermissionDenied
@@ -8,7 +12,10 @@ from rest_framework import viewsets, generics, status, parsers
 from .models import User, Building, Room, RoomRegistration, RoomSwap, Invoice, InvoiceDetail
 from . import serializers
 from .perms import IsAdmin, OwnerPerms, RoomSwapOwner, IsStudent
-from .utils.email import send_invoice_email
+from .services.vnpay_service import VNPayService
+from .utils.email import send_invoice_email, send_invoice_payment_success_email
+
+
 # Create your views here.
 
 
@@ -207,6 +214,7 @@ class InvoiceViewSet(viewsets.ViewSet, generics.ListAPIView, generics.RetrieveAP
     @action(detail=True, methods=['patch'])
     def pay(self, request, pk=None):
         invoice = self.get_queryset().filter(pk=pk).first()
+
         if not invoice:
             return Response({"detail": "Không tìm thấy hóa đơn."}, status=404)
 
@@ -218,17 +226,31 @@ class InvoiceViewSet(viewsets.ViewSet, generics.ListAPIView, generics.RetrieveAP
         if not reg or reg.room != invoice.room:
             return Response({"detail": "Bạn không có quyền thanh toán hóa đơn này."}, status=403)
 
+            # Validate payment_method thông qua serializer
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
+        payment_method = serializer.validated_data['payment_method']
 
-        invoice.is_paid = True
-        invoice.paid_at = timezone.now()
-        invoice.payment_method = serializer.validated_data['payment_method']
-        invoice.save()
+        amount = int(invoice.total_amount)  # từ property tính từ InvoiceDetail
+        order_id = f"{invoice.id}_{int(datetime.now().timestamp())}"
+        order_desc = f"Hóa đơn ký túc xá tháng {invoice.billing_period.strftime('%m/%Y')}"
+        ip = request.META.get('REMOTE_ADDR', '127.0.0.1')
+
+        payment_url = VNPayService.create_payment_url(
+            order_id=order_id,
+            amount=amount,
+            order_desc=order_desc,
+            order_type="billpayment",
+            ip_address=ip,
+        )
+
+        # Optional: lưu payment_method tạm vào invoice để sau IPN update
+        invoice.payment_method = payment_method
+        invoice.save(update_fields=['payment_method'])
 
         return Response({
-            "message": "Thanh toán thành công.",
-            "data": serializers.InvoiceSerializer(invoice).data
+            "payment_url": payment_url,
+            "amount": amount
         }, status=200)
 
 
@@ -253,3 +275,60 @@ class InvoiceDetailViewSet(viewsets.GenericViewSet,
             registrations = RoomRegistration.objects.filter(room=invoice.room, is_active=True)
             for reg in registrations:
                 send_invoice_email(reg.student, invoice)
+
+
+def payment_return(request):
+    input_data = request.GET.dict()  # Lấy tất cả các tham số từ URL
+    vnp = VNPay()
+    vnp.responseData = input_data
+
+    # Kiểm tra chữ ký của dữ liệu trả về
+    if not vnp.validate_response(settings.VNPAY_HASH_SECRET_KEY):
+        return JsonResponse({"RspCode": "97", "Message": "Invalid Signature"}, status=400)
+
+    # Lấy mã giao dịch (TxnRef) từ dữ liệu trả về
+    order_id = input_data.get('vnp_TxnRef')
+    response_code = input_data.get('vnp_ResponseCode')
+
+    # Tìm hóa đơn dựa trên mã giao dịch (TxnRef)
+    invoice_id = order_id.split("_")[0]
+    invoice = Invoice.objects.filter(pk=invoice_id).first()
+
+    if not invoice:
+        return JsonResponse({"RspCode": "01", "Message": "Invoice not found"}, status=404)
+
+    # Nếu hóa đơn đã được thanh toán rồi
+    if invoice.is_paid:
+        return JsonResponse({"RspCode": "02", "Message": "Order already updated"}, status=400)
+
+    # Kiểm tra mã phản hồi từ VNPay, "00" là thanh toán thành công
+    if response_code == "00":
+        invoice.is_paid = True
+        invoice.paid_at = timezone.now()
+        invoice.save()
+
+        registrations = RoomRegistration.objects.filter(room=invoice.room, is_active=True)
+        for reg in registrations:
+            send_invoice_payment_success_email(reg.student, invoice)
+
+        return JsonResponse({
+            "RspCode": "00",
+            "Message": "Confirm Success",
+            "invoice_data": {
+                "invoice_id": order_id,
+                "amount": invoice.total_amount,
+                "status": "Paid",
+                "paid_at": invoice.paid_at.strftime('%Y-%m-%d %H:%M:%S'),
+            }
+        })
+
+    # Trả về thông báo nếu thanh toán không thành công
+    return JsonResponse({
+        "RspCode": "02",
+        "Message": "Payment failed",
+        "Invoice": {
+            "invoice_id": invoice.id,
+            "amount": invoice.total_amount,
+            "status": "Failed"
+        }
+    }, status=400)

@@ -99,15 +99,20 @@ EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 
 EMAIL_HOST_USER = 's277beautiful@gmail.com'  # Gmail bạn dùng để gửi
-EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD') # App Password, KHÔNG dùng mật khẩu Gmail thường
+EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD')  # App Password, KHÔNG dùng mật khẩu Gmail thường
 
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 
 # VNPAY-SETTINGS
-VNPAY_TMN_CODE = os.getenv("VNPAY_TMN_CODE")
-VNPAY_HASH_SECRET_KEY = os.getenv("VNPAY_HASH_SECRET_KEY")
-VNPAY_PAYMENT_URL = os.getenv("VNPAY_PAYMENT_URL")
-VNPAY_RETURN_URL = os.getenv("VNPAY_RETURN_URL")
+VNPAY_TMN_CODE = config("VNPAY_TMN_CODE")
+VNPAY_HASH_SECRET_KEY = config("VNPAY_HASH_SECRET_KEY")
+VNPAY_PAYMENT_URL = config("VNPAY_PAYMENT_URL")
+VNPAY_RETURN_URL = config("VNPAY_RETURN_URL")
+
+print("VNPAY_TMN_CODE:", VNPAY_TMN_CODE)
+print("VNPAY_HASH_SECRET_KEY:", VNPAY_HASH_SECRET_KEY)
+print("VNPAY_PAYMENT_URL:", VNPAY_PAYMENT_URL)
+print("VNPAY_RETURN_URL:", VNPAY_RETURN_URL)
 
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
@@ -183,5 +188,3 @@ cloudinary.config(
     api_secret=config('API_SECRET'),  # Click 'View API Keys' above to copy your API secret
     secure=True
 )
-
-

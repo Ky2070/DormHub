@@ -22,3 +22,28 @@ def send_invoice_email(user, invoice):
         """
     recipient = [user.email]
     send_mail(subject, message, settings.DEFAULT_FROM_EMAIL, recipient)
+
+
+def send_invoice_payment_success_email(user, invoice):
+    # Tạo nội dung email thông báo thanh toán thành công
+    formatted_amount = "{:,.0f} VND".format(invoice.total_amount)
+    formatted_paid_at = invoice.paid_at.strftime('%d/%m/%Y %H:%M:%S')
+
+    subject = f"Thông báo thanh toán hóa đơn ký túc xá - Tháng {invoice.billing_period.strftime('%m/%Y')}"
+    message = f"""
+        Xin chào {user.first_name} {user.last_name},
+
+        Hóa đơn tiền phòng cho {invoice.room.name} của bạn đã được thanh toán thành công.
+
+        Chi tiết thanh toán:
+        - Mã hóa đơn: {invoice.id}
+        - Tổng tiền: {formatted_amount}
+        - Ngày thanh toán: {formatted_paid_at}
+
+        Cảm ơn bạn đã sử dụng dịch vụ của ký túc xá!
+
+        Trân trọng,
+        Ban quản lý ký túc xá
+    """
+    recipient = [user.email]
+    send_mail(subject, message, settings.DEFAULT_FROM_EMAIL, recipient)

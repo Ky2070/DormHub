@@ -1,14 +1,14 @@
 from datetime import datetime
 from django.conf import settings
 from django.utils import timezone
-from dormapis.dorms.models import Invoice
-from dormapis.dorms.utils.vnpay import vnpay
+from ..models import Invoice
+from ..utils.vnpay import VNPay
 
 
 class VNPayService:
     @staticmethod
     def create_payment_url(order_id, amount, order_desc, order_type, ip_address, language="vn", bank_code=None):
-        vnp = vnpay()
+        vnp = VNPay()
         vnp.requestData = {
             'vnp_Version': '2.1.0',
             'vnp_Command': 'pay',
@@ -30,7 +30,7 @@ class VNPayService:
 
     @staticmethod
     def handle_ipn(input_data: dict):
-        vnp = vnpay()
+        vnp = VNPay()
         vnp.responseData = input_data
         order_id = input_data.get('vnp_TxnRef')
         response_code = input_data.get('vnp_ResponseCode')
@@ -39,6 +39,7 @@ class VNPayService:
             return {'RspCode': '97', 'Message': 'Invalid Signature'}
 
         invoice_id = order_id.split("_")[0]
+
         invoice = Invoice.objects.filter(pk=invoice_id).first()
         if not invoice:
             return {'RspCode': '01', 'Message': 'Invoice not found'}
@@ -49,7 +50,7 @@ class VNPayService:
         if response_code == '00':
             invoice.is_paid = True
             invoice.paid_at = timezone.now()
-            invoice.payment_method = 'vnpay'
+            invoice.payment_method = 'VNPay'
             invoice.save()
 
         return {'RspCode': '00', 'Message': 'Confirm Success'}

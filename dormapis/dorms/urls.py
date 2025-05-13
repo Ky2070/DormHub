@@ -12,4 +12,5 @@ router.register('invoice', views.InvoiceViewSet, basename='invoice')
 router.register('invoice-detail', views.InvoiceDetailViewSet, basename='invoice-detail')
 urlpatterns = [
     path('', include(router.urls)),
+    path('payment-return/', views.payment_return, name='payment_return'),
 ]

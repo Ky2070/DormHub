@@ -1,5 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import AbstractUser
+from decimal import Decimal
 # Create your models here.
 
 
@@ -143,6 +144,12 @@ class Invoice(models.Model):
 
     def __str__(self):
         return f"Hóa đơn phòng {self.room.name} - {self.billing_period.strftime('%m/%Y')}"
+
+    @property
+    def total_amount(self):
+        return sum(
+            (detail.amount or Decimal('0.00')) for detail in self.invoice_details.all()
+        )
 
 
 class InvoiceDetail(models.Model):

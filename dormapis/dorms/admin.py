@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Building, Room, User, FeeType
+from .models import Building, Room, User, FeeType, PaymentMethod
 from django.contrib.auth import get_user_model
 
 @admin.register(Building)
@@ -27,4 +27,10 @@ class CustomUserAdmin(admin.ModelAdmin):
 @admin.register(FeeType)
 class FeeTypeAdmin(admin.ModelAdmin):
     list_display = ('id', 'name', 'is_recurring')
+    search_fields = ('name',)
+
+
+@admin.register(PaymentMethod)
+class PaymentMethodAdmin(admin.ModelAdmin):
+    list_display = ('name', 'description', 'active')
     search_fields = ('name',)
