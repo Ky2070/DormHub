@@ -278,7 +278,7 @@ class InvoiceDetailViewSet(viewsets.GenericViewSet,
 
 
 def payment_return(request):
-    input_data = request.GET.dict()  # Lấy tất cả các tham số từ URL
+    input_data = request.GET.dict()
     vnp = VNPay()
     vnp.responseData = input_data
 
@@ -302,6 +302,7 @@ def payment_return(request):
         return JsonResponse({"RspCode": "02", "Message": "Order already updated"}, status=400)
 
     # Kiểm tra mã phản hồi từ VNPay, "00" là thanh toán thành công
+
     if response_code == "00":
         invoice.is_paid = True
         invoice.paid_at = timezone.now()
@@ -315,14 +316,13 @@ def payment_return(request):
             "RspCode": "00",
             "Message": "Confirm Success",
             "invoice_data": {
-                "invoice_id": order_id,
+                "invoice_id": invoice.id,
                 "amount": invoice.total_amount,
                 "status": "Paid",
                 "paid_at": invoice.paid_at.strftime('%Y-%m-%d %H:%M:%S'),
             }
         })
 
-    # Trả về thông báo nếu thanh toán không thành công
     return JsonResponse({
         "RspCode": "02",
         "Message": "Payment failed",

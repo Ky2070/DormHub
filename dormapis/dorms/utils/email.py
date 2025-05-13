@@ -1,6 +1,7 @@
 from django.core.mail import send_mail
 from django.conf import settings
 from datetime import timedelta
+from django.utils.timezone import localtime
 
 
 def send_invoice_email(user, invoice):
@@ -27,7 +28,7 @@ def send_invoice_email(user, invoice):
 def send_invoice_payment_success_email(user, invoice):
     # Tạo nội dung email thông báo thanh toán thành công
     formatted_amount = "{:,.0f} VND".format(invoice.total_amount)
-    formatted_paid_at = invoice.paid_at.strftime('%d/%m/%Y %H:%M:%S')
+    formatted_paid_at = localtime(invoice.paid_at).strftime('%d/%m/%Y %H:%M:%S')
 
     subject = f"Thông báo thanh toán hóa đơn ký túc xá - Tháng {invoice.billing_period.strftime('%m/%Y')}"
     message = f"""

@@ -109,11 +109,6 @@ VNPAY_HASH_SECRET_KEY = config("VNPAY_HASH_SECRET_KEY")
 VNPAY_PAYMENT_URL = config("VNPAY_PAYMENT_URL")
 VNPAY_RETURN_URL = config("VNPAY_RETURN_URL")
 
-print("VNPAY_TMN_CODE:", VNPAY_TMN_CODE)
-print("VNPAY_HASH_SECRET_KEY:", VNPAY_HASH_SECRET_KEY)
-print("VNPAY_PAYMENT_URL:", VNPAY_PAYMENT_URL)
-print("VNPAY_RETURN_URL:", VNPAY_RETURN_URL)
-
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
@@ -159,7 +154,7 @@ INTERNAL_IPS = [
 
 LANGUAGE_CODE = 'en-us'
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'Asia/Ho_Chi_Minh'
 
 USE_I18N = True
 
