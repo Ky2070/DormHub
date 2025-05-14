@@ -13,6 +13,7 @@ from .models import User, Building, Room, RoomRegistration, RoomSwap, Invoice, I
 from . import serializers
 from .perms import IsAdmin, OwnerPerms, RoomSwapOwner, IsStudent
 from .services.vnpay_service import VNPayService
+from .services import firebase_service
 from .utils.email import send_invoice_email, send_invoice_payment_success_email
 
 
@@ -276,6 +277,17 @@ class InvoiceDetailViewSet(viewsets.GenericViewSet,
             for reg in registrations:
                 send_invoice_email(reg.student, invoice)
 
+            # Gửi thông báo
+            firebase_service.notify_user(
+                user=invoice.student,
+                title="Hóa đơn mới",
+                body=f"Hóa đơn {invoice.code} đã được tạo, tổng tiền: {invoice.total_amount} VNĐ",
+                data={
+                    "invoice_id": str(invoice.id),
+                    "type": "new_invoice"
+                }
+            )
+
 
 def payment_return(request):
     input_data = request.GET.dict()
@@ -311,6 +323,16 @@ def payment_return(request):
         registrations = RoomRegistration.objects.filter(room=invoice.room, is_active=True)
         for reg in registrations:
             send_invoice_payment_success_email(reg.student, invoice)
+
+        firebase_service.notify_user(
+            user=invoice.student,
+            title="Thanh toán thành công",
+            body=f"Hóa đơn {invoice.code} đã được thanh toán thành công.",
+            data={
+                "invoice_id": str(invoice.id),
+                "type": "invoice_paid"
+            }
+        )
 
         return JsonResponse({
             "RspCode": "00",
