@@ -2,6 +2,7 @@ from firebase_admin import messaging
 from ..utils.firebase import *
 from ..models import FCMDevice
 
+
 def send_push_notification(token: str, title: str, body: str, data: dict = None):
     message = messaging.Message(
         notification=messaging.Notification(
