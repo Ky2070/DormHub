@@ -47,6 +47,16 @@ class UserViewSet(viewsets.ViewSet, generics.CreateAPIView):
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+    @action(methods=['get'], detail=False, url_path='my-room', permission_classes=[IsAuthenticated])
+    def my_room(self, request):
+        try:
+            registration = RoomRegistration.objects.select_related('room', 'room__building') \
+                .get(student=request.user, is_active=True)
+            room = registration.room
+            return Response(serializers.RoomSerializer(room).data, status=status.HTTP_200_OK)
+        except RoomRegistration.DoesNotExist:
+            return Response({"detail": "Bạn chưa ở phòng nào hiện tại."}, status=status.HTTP_404_NOT_FOUND)
+
 
 class BuildingViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Building.objects.all()
