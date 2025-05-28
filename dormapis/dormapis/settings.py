@@ -72,7 +72,7 @@ OAUTH2_PROVIDER = {'OAUTH2_BACKEND_CLASS': 'oauth2_provider.oauth2_backends.JSON
 
 ROOT_URLCONF = 'dormapis.urls'
 
-CKEDITOR_UPLOAD_PATH = "ckeditors/dorms/"
+CKEDITOR_UPLOAD_PATH = "ckeditors/rooms/"
 
 CORS_ALLOW_ALL_ORIGINS = True
 

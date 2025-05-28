@@ -6,6 +6,13 @@ from datetime import date
 from decimal import Decimal
 
 
+class BaseSerializer(serializers.ModelSerializer):
+    def to_representation(self, instance):
+        d = super().to_representation(instance)
+        d['image'] = instance.image.url
+        return d
+
+
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
@@ -24,6 +31,11 @@ class UserSerializer(serializers.ModelSerializer):
         u.save()
 
         return u
+
+    def to_representation(self, instance):
+        d = super().to_representation(instance)
+        d['avatar'] = instance.avatar.url if instance.avatar else ''
+        return d
 
 
 class UpdateProfileSerializer(serializers.ModelSerializer):
@@ -73,14 +85,14 @@ class UpdateProfileSerializer(serializers.ModelSerializer):
         return instance
 
 
-class RoomSerializer(serializers.ModelSerializer):
+class RoomSerializer(BaseSerializer):
     current_students = serializers.IntegerField(read_only=True)
     is_full = serializers.BooleanField(read_only=True)
     available_capacity = serializers.IntegerField(read_only=True)
 
     class Meta:
         model = Room
-        fields = ['id', 'name', 'building', 'capacity', 'gender_restriction',
+        fields = ['id', 'name', 'building', 'description', 'image', 'capacity', 'gender_restriction',
                   'current_students', 'is_full', 'available_capacity']
 
 

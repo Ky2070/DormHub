@@ -6,7 +6,18 @@ from .models import (
     SupportRequest, SupportResponse,
     Survey, SurveyQuestion, SurveyResponse
 )
+from django.utils.html import mark_safe
+from django import forms
+from ckeditor_uploader.widgets import CKEditorUploadingWidget
 from django.contrib.auth import get_user_model
+from django.utils.html import format_html
+
+
+class MyAdminSite(admin.AdminSite):
+    site_header = 'OU Dorms Online'
+
+
+admin_site = MyAdminSite(name='admin')
 
 
 @admin.register(Building)
@@ -15,11 +26,34 @@ class BuildingAdmin(admin.ModelAdmin):
     search_fields = ('name', 'address')
 
 
-@admin.register(Room)
-class RoomAdmin(admin.ModelAdmin):
-    list_display = ('id', 'name', 'building', 'capacity', 'gender_restriction')
+class RoomForm(forms.ModelForm):
+    description = forms.CharField(widget=CKEditorUploadingWidget)
+
+    class Meta:
+        model = Room
+        fields = '__all__'
+
+
+class MyRoomAdmin(admin.ModelAdmin):
+    list_display = ('id', 'name', 'building', 'image_tag', 'capacity', 'gender_restriction')
     list_filter = ('building', 'gender_restriction')
     search_fields = ('name',)
+    readonly_fields = ['image_view']
+    form = RoomForm
+
+    def image_tag(self, obj):
+        if obj.image:
+            return format_html(f'<img src="{obj.image.url}" width="100" height="auto" style="object-fit: cover;" />', obj.image.url)
+        return "-"
+
+    image_tag.short_description = 'Image'  # Cột tiêu đề
+
+    def image_view(self, rooms):
+        if rooms:
+            return mark_safe(f"<img src='{rooms.image.url}' width='120' />")
+
+
+admin.site.register(Room, MyRoomAdmin)
 
 
 User = get_user_model()
@@ -30,7 +64,6 @@ class CustomUserAdmin(admin.ModelAdmin):
     list_display = [field.name for field in User._meta.fields if field.name != 'password']
     exclude = ('password',)
     search_fields = ('username', 'email', 'first_name', 'last_name', 'student_code', 'phone')
-
 
 
 @admin.register(FeeType)

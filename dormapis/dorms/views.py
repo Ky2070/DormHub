@@ -10,7 +10,7 @@ from rest_framework.exceptions import ValidationError, PermissionDenied
 from rest_framework.permissions import IsAuthenticated
 from rest_framework import viewsets, generics, status, parsers
 from .models import User, Building, Room, RoomRegistration, RoomSwap, Invoice, InvoiceDetail, FCMDevice
-from . import serializers
+from . import serializers, paginators
 from .perms import IsAdmin, OwnerPerms, RoomSwapOwner, IsStudent
 from .services.vnpay_service import VNPayService
 from .services import firebase_service
@@ -50,7 +50,6 @@ class UserViewSet(viewsets.ViewSet, generics.CreateAPIView):
 
 class BuildingViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Building.objects.all()
-    permission_classes = [IsAuthenticated]
 
     def get_serializer_class(self):
         if self.action == 'retrieve':
@@ -59,9 +58,9 @@ class BuildingViewSet(viewsets.ReadOnlyModelViewSet):
 
 
 class RoomViewSet(viewsets.ReadOnlyModelViewSet):
-    queryset = Room.objects.select_related('building').all()
+    queryset = Room.objects.select_related('building').all().order_by('id')
     serializer_class = serializers.RoomSerializer
-    permission_classes = [IsAuthenticated]
+    pagination_class = paginators.ItemPaginator
 
     def get_queryset(self):
         queryset = self.queryset
