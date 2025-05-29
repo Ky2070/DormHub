@@ -13,7 +13,7 @@ class User(AbstractUser):
     )
     phone = models.CharField(max_length=100, null=True, blank=True)
     student_code = models.CharField(max_length=100, blank=True, null=True, unique=True)
-    avatar = CloudinaryField(null=True)
+    avatar = models.ImageField(upload_to='users/%Y/%m', null=True)
     # models.ImageField(upload_to='uploads/avatars/%Y/%m', null=True, blank=True)
     updated_profile = models.DateTimeField(null=True, blank=True)
     role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='student')
@@ -60,7 +60,7 @@ class Room(models.Model):
     building = models.ForeignKey(Building, on_delete=models.CASCADE)
     name = models.CharField(max_length=100)
     description = RichTextField(null=True, blank=True)
-    image = CloudinaryField(null=True)
+    image = models.ImageField(upload_to='rooms/%Y/%m', null=True)
     capacity = models.PositiveIntegerField()
     gender_restriction = models.CharField(
         max_length=30,
