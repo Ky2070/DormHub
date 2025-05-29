@@ -31,7 +31,7 @@ class User(AbstractUser):
     national_code = models.CharField(max_length=30, null=True, blank=True)
 
     def __str__(self):
-        return f"{self.username} - {self.get_full_name()}"
+        return f"{self.username}"
 
 
 class FCMDevice(models.Model):

@@ -61,7 +61,7 @@ User = get_user_model()
 
 @admin.register(User)
 class CustomUserAdmin(admin.ModelAdmin):
-    list_display = [field.name for field in User._meta.fields if field.name != 'password']
+    list_display = ('id', 'username', 'email', 'first_name', 'last_name', 'student_code', 'phone', 'role', 'gender')
     exclude = ('password',)
     search_fields = ('username', 'email', 'first_name', 'last_name', 'student_code', 'phone')
 
