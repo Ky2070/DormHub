@@ -9,14 +9,24 @@ from decimal import Decimal
 class BaseSerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
         d = super().to_representation(instance)
-        d['image'] = instance.image.url
+
+        request = self.context.get('request')
+        if instance.image:
+            # Tự build đường dẫn có /static/ nếu ảnh nằm trong static files
+            image_path = instance.image.name  # VD: 'rooms/2025/05/room1.jpg'
+            static_url = '/static/'  # Hoặc settings.STATIC_URL nếu đã cấu hình
+            full_url = request.build_absolute_uri(static_url + image_path) if request else static_url + image_path
+            d['image'] = full_url
+        else:
+            d['image'] = ''
+
         return d
 
 
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ['first_name', 'last_name', 'username', 'password', 'avatar']
+        fields = ['id', 'first_name', 'last_name', 'username', 'password', 'avatar', 'role', 'gender', 'email']
         extra_kwargs = {
             'password': {
                 'write_only': True
@@ -33,9 +43,21 @@ class UserSerializer(serializers.ModelSerializer):
         return u
 
     def to_representation(self, instance):
-        d = super().to_representation(instance)
-        d['avatar'] = instance.avatar.url if instance.avatar else ''
-        return d
+        data = super().to_representation(instance)
+        request = self.context.get('request')
+
+        if instance.avatar:
+            # Dùng avatar.url => luôn là đường dẫn tương đối (/static/...)
+            avatar_url = instance.avatar.url
+            static_url = '/static/'
+            # build absolute url: https://... nếu có request
+            if request is not None:
+                avatar_url = request.build_absolute_uri(static_url + avatar_url)
+            data['avatar'] = avatar_url
+        else:
+            data['avatar'] = ''
+
+        return data
 
 
 class UpdateProfileSerializer(serializers.ModelSerializer):
@@ -43,7 +65,7 @@ class UpdateProfileSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ['username', 'email', 'phone', 'avatar', 'gender', 'date_of_birth', 'address', 'national_code',
+        fields = ['username', 'email', 'phone', 'avatar', 'gender', 'date_of_birth', 'address', 'national_code', 'role',
                   'student_code', 'password']
 
     def validate_phone(self, value):
@@ -94,6 +116,19 @@ class RoomSerializer(BaseSerializer):
         model = Room
         fields = ['id', 'name', 'building', 'description', 'image', 'capacity', 'gender_restriction',
                   'current_students', 'is_full', 'available_capacity']
+
+class RoomRegistrationAdminSerializer(serializers.ModelSerializer):
+    student_name = serializers.CharField(source="student.get_full_name", read_only=True)
+    student_code = serializers.CharField(source="student.student_code", read_only=True)
+    room_name = serializers.CharField(source="room.name", read_only=True)
+    building_name = serializers.CharField(source="room.building.name", read_only=True)
+
+    class Meta:
+        model = RoomRegistration
+        fields = [
+            'id', 'student_name', 'student_code', 'room_name', 'building_name',
+            'registered_at', 'start_date', 'end_date', 'is_active'
+        ]
 
 
 class RegisterRoomSerializer(serializers.ModelSerializer):

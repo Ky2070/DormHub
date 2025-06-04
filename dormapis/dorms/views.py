@@ -28,7 +28,8 @@ class UserViewSet(viewsets.ViewSet, generics.CreateAPIView):
 
     @action(methods=['get'], url_path='current-user', detail=False, permission_classes=[IsAuthenticated])
     def get_current_user(self, request):
-        return Response(serializers.UserSerializer(request.user).data)
+        serializer = serializers.UserSerializer(request.user, context={'request': request})
+        return Response(serializer.data)
 
     @action(methods=['put', 'patch'], detail=True, url_path='update-profile', permission_classes=[OwnerPerms])
     def update_profile(self, request, pk=None):
@@ -53,7 +54,8 @@ class UserViewSet(viewsets.ViewSet, generics.CreateAPIView):
             registration = RoomRegistration.objects.select_related('room', 'room__building') \
                 .get(student=request.user, is_active=True)
             room = registration.room
-            return Response(serializers.RoomSerializer(room).data, status=status.HTTP_200_OK)
+            serializer = serializers.RoomSerializer(room, context={'request': request})
+            return Response(serializer.data, status=status.HTTP_200_OK)
         except RoomRegistration.DoesNotExist:
             return Response({"detail": "Bạn chưa ở phòng nào hiện tại."}, status=status.HTTP_404_NOT_FOUND)
 
@@ -93,12 +95,32 @@ class RoomViewSet(viewsets.ReadOnlyModelViewSet):
         return queryset
 
 
-class RoomRegisterViewSet(viewsets.ViewSet, generics.CreateAPIView):
-    serializer_class = serializers.RegisterRoomSerializer
-    permission_classes = [IsAuthenticated]
+class RoomRegisterViewSet(viewsets.ViewSet,
+                          generics.CreateAPIView):
+    queryset = RoomRegistration.objects.all()
+
+    def get_permissions(self):
+        if self.request.method == 'POST':
+            return [IsStudent()]
+        elif self.request.method == 'GET':
+            return [IsAdmin()]
+        return [IsAuthenticated()]  # fallback
+
+    def get_serializer_class(self):
+        if self.request.method == 'GET':
+            return serializers.RoomRegistrationAdminSerializer
+        return serializers.RegisterRoomSerializer
 
     def perform_create(self, serializer):
         serializer.save(student=self.request.user)
+
+    def list(self, request):
+        if not IsAdmin().has_permission(request, self):
+            raise PermissionDenied("Chỉ quản trị viên mới được xem danh sách đăng ký phòng.")
+
+        queryset = RoomRegistration.objects.select_related('student', 'room', 'room__building')
+        serializer = serializers.RoomRegistrationAdminSerializer(queryset, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 class RoomSwapViewSet(viewsets.ViewSet, generics.ListAPIView, generics.CreateAPIView):
