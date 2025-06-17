@@ -1,5 +1,6 @@
 from rest_framework import serializers
-from .models import User, Room, RoomRegistration, RoomSwap, Building, Invoice, InvoiceDetail, PaymentMethod, FCMDevice
+from .models import User, Room, RoomRegistration, RoomSwap, Building, Invoice, InvoiceDetail, PaymentMethod, FCMDevice, \
+    Notification, SupportRequest, SupportResponse
 import re
 from django.utils import timezone
 from datetime import date
@@ -246,3 +247,25 @@ class FCMDeviceSerializer(serializers.ModelSerializer):
     class Meta:
         model = FCMDevice
         fields = ['token']
+
+
+class NotificationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Notification
+        fields = "__all__"
+        read_only_fields = ['sent_by', 'created_at']
+
+
+class SupportRequestSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SupportRequest
+        fields = "__all__"
+        read_only_fields = ['student', 'created_at']
+
+
+class SupportResponseSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SupportResponse
+        fields = "__all__"
+        read_only_fields = ['responder', 'responded_at']
+

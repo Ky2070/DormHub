@@ -9,7 +9,8 @@ from rest_framework.response import Response
 from rest_framework.exceptions import ValidationError, PermissionDenied
 from rest_framework.permissions import IsAuthenticated
 from rest_framework import viewsets, generics, status, parsers
-from .models import User, Building, Room, RoomRegistration, RoomSwap, Invoice, InvoiceDetail, FCMDevice
+from .models import User, Building, Room, RoomRegistration, RoomSwap, Invoice, InvoiceDetail, FCMDevice, SupportRequest, \
+    Notification
 from . import serializers, paginators
 from .perms import IsAdmin, OwnerPerms, RoomSwapOwner, IsStudent
 from .services.vnpay_service import VNPayService
@@ -397,4 +398,72 @@ class FCMTokenViewSet(viewsets.ViewSet, generics.CreateAPIView):
             user=self.request.user,
             token=token,
             defaults={'token': token}
+        )
+
+
+class NotificationViewSet(viewsets.GenericViewSet,
+                          generics.ListAPIView,
+                          generics.CreateAPIView):
+    queryset = Notification.objects.all().order_by('-created_at')
+    serializer_class = serializers.NotificationSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        user = self.request.user
+        if user.role == 'admin':
+            return Notification.objects.all()
+        return Notification.objects.filter(target_users=user)
+
+    # def perform_create(self, serializer):
+    #     notif = serializer.save(sent_by=self.request.user)
+    #
+    #     # Gửi FCM cho từng user
+    #     for user in notif.target_users.all():
+    #         firebase_service.notify_user(
+    #             user=user,
+    #             title=notif.title,
+    #             body=notif.content,
+    #             data={
+    #                 "type": "notification",
+    #                 "notification_id": notif.id
+    #             },
+    #             is_urgent=notif.is_urgent
+    #         )
+
+
+class SupportRequestViewSet(viewsets.GenericViewSet,
+                            generics.ListAPIView,
+                            generics.CreateAPIView):
+    serializer_class = serializers.SupportRequestSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        user = self.request.user
+        if user.role == 'admin':
+            return SupportRequest.objects.all().order_by('-created_at')
+        return SupportRequest.objects.filter(student=user).order_by('-created_at')
+
+    def perform_create(self, serializer):
+        # Auto-đính kèm phòng của sinh viên nếu chưa có
+        room = serializer.validated_data.get('room') or getattr(self.request.user, 'room', None)
+        serializer.save(student=self.request.user, room=room)
+
+
+class SupportResponseViewSet(viewsets.GenericViewSet,
+                             generics.CreateAPIView):
+    serializer_class = serializers.SupportResponseSerializer
+    permission_classes = [IsAuthenticated, IsAdmin]
+
+    def perform_create(self, serializer):
+        response = serializer.save(responder=self.request.user)
+
+        # Gửi FCM cho sinh viên khi có phản hồi
+        firebase_service.notify_user(
+            user=response.request.student,
+            title="Phản hồi yêu cầu hỗ trợ",
+            body=f"Yêu cầu '{response.request.title}' đã được phản hồi.",
+            data={
+                "type": "support_response",
+                "request_id": response.request.id
+            }
         )

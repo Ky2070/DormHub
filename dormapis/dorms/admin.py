@@ -74,7 +74,7 @@ class FeeTypeAdmin(admin.ModelAdmin):
 
 @admin.register(PaymentMethod)
 class PaymentMethodAdmin(admin.ModelAdmin):
-    list_display = ('name', 'description', 'active')
+    list_display = ('id', 'name', 'description', 'active')
     search_fields = ('name',)
 
 
